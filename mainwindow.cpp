@@ -24,7 +24,7 @@ Ubuntu : sudo apt-get install -y libsndfile-dev
 Pour faire tourner sous Ubuntu :
 
 sudo apt install libportaudio2
-
+git test
 */
 
 
