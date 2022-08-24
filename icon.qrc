@@ -1,0 +1,37 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/disconnected.png</file>
+        <file>images/connecting.png</file>
+        <file>images/connected.png</file>
+        <file>images/disconnecting.png</file>
+        <file>images/pause.png</file>
+        <file>images/play.png</file>
+        <file>images/folder.png</file>
+        <file>images/HP_Off.png</file>
+        <file>images/HP_On.png</file>
+        <file>images/record.png</file>
+        <file>images/stop.png</file>
+        <file>images/replay.png</file>
+        <file>images/microrouge.png</file>
+        <file>images/microvert.png</file>
+        <file>images/save.png</file>
+        <file>images/music_off.png</file>
+        <file>images/music_on.png</file>
+        <file>images/rewind.png</file>
+        <file>images/mixer.png</file>
+        <file>images/drum.png</file>
+        <file>images/OFF.png</file>
+        <file>images/ON.png</file>
+        <file>images/microoff.png</file>
+        <file>images/sync-circle-blue-512.png</file>
+        <file>images/mixer-512.png</file>
+        <file>images/init.png</file>
+        <file>images/reload.png</file>
+        <file>images/log-file-format.png</file>
+        <file>images/vu-meter-off.png</file>
+        <file>images/vu-meter-on.png</file>
+        <file>images/eyeOff.png</file>
+        <file>images/eyeOn.png</file>
+        <file>images/ftpupload.png</file>
+    </qresource>
+</RCC>
