@@ -1,4 +1,4 @@
-# remyxer
+# Remyxer
 Real time audio multitrack mixer/recorder/player.
 
 Remyxer is dedicated to use mulitple USB audio input/output device.
