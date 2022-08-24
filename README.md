@@ -19,5 +19,5 @@ Remyxer can record all musician tracks independently and produce a wav file for 
 
 Once recorded, Remyxer can playback all tracks.
 
-Remyxer can upload the wav file to an FTP server to share it with the other band members working on the same partition.
+Remyxer can upload the wav file to an FTP server to share it with the other band members working on the same partition, then musician can work even if a musician in not present.
 
