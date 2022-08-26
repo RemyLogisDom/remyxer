@@ -3,11 +3,11 @@ Real time audio multitrack mixer/recorder/player.
 
 Remyxer is dedicated to musician work, and use mulitple USB audio input/output device.
 
-It is suppose to reproduce like a recording studio but dedicated to musician work.
+It is supposed to act like a recording studio but more oriented to musician work.
 
 One input/ouput per musician to capture it own sound and play it in real time to the headphone.
 
-Remyxer can play a wav file during real time sound directly copied from the input (microphne) to the output (headphones).
+Remyxer add a wav file during real time sound directly copied from the input (microphne) to the output (headphones).
 
 The musician can play along with the wav sound track will hearing it own sound from the microphone.
 
@@ -17,7 +17,9 @@ Every musician will hear its own sound mixed with the wav sound track but it can
 
 Remyxer can record all musician tracks independently and produce a wav file for each musician.
 
-Once recorded, Remyxer can playback all tracks.
+Once recorded, Remyxer can playback all the tracks, or record one or more will playing the others, or whatever you need.
 
-Remyxer can upload the wav file to an FTP server to share it with the other band members working on the same partition, then musician can work even if a musician in not present.
+Remyxer can upload the wav files to an FTP server to share it with the other band members working on the same partition, then musicians can work even if a musician in not present or if they are not together, they will still have the recorded sounds.
+
+Remyxer uses portaudio to drive real time multitrack audio input output and libsndfile to read and write wav files.
 
