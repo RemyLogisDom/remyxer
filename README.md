@@ -21,5 +21,5 @@ Once recorded, Remyxer can playback all the tracks, or record one or more will p
 
 Remyxer can upload the wav files to an FTP server to share it with the other band members working on the same partition, then musicians can work even if a musician in not present or if they are not together, they will still have the recorded sounds.
 
-Remyxer uses portaudio to drive real time multitrack audio input output and libsndfile to read and write wav files.
+Remyxer is compiled with Qt for the Gui part, uses portaudio to drive real time multitrack audio input output, and libsndfile to read and write wav files.
 
