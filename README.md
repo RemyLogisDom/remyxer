@@ -23,3 +23,4 @@ Remyxer can upload the wav files to an FTP server to share it with the other ban
 
 Remyxer is compiled with Qt for the Gui part, uses portaudio to drive real time multitrack audio input output, and libsndfile to read and write wav files.
 
+Audio sampling rate can be 44,1kHz or 48kHz. Wav files will be converted by Remyxer if they don't match the device audio sampling rate, but for the moment the conversion algoryhthm is not accurate to give a perfect sound. The best is to first convert with well known software like Audacity.
