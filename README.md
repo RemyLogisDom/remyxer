@@ -7,7 +7,7 @@ It is supposed to act like a recording studio but more oriented to musician work
 
 One input/ouput per musician to capture it own sound and play it in real time to the headphone.
 
-Remyxer add a wav file during real time sound directly copied from the input (microphne) to the output (headphones).
+Remyxer add a wav file during real time sound operating from the input (microphne) to the output (headphones).
 
 The musician can play along with the wav sound track will hearing it own sound from the microphone.
 
