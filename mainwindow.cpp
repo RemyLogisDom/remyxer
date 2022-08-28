@@ -725,22 +725,25 @@ int MainWindow::Callback(const void *input,
             // add playback from other tracks
             // not needed any more since track inter mix
             //if (data->mixEnabled && mixEnabled && (!Paused)) {
-            /*if (mixEnabled && (!Paused)) {
+            if (mixEnabled && (!Paused)) {
             for (int n=0; n<nbInstru; n++) {
-                if ((pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback) && (n != data->myIndex)) {
-                    float g = pa_data[n].mixGain[data->myIndex];
-                    if (n == data->myIndex) g = pa_data[n].G_Play;
+                float g = 0;
+                if (n == data->myIndex) g = 0; //pa_data[n].G_Play;
+                if ((pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback) && (n != data->myIndex) && pa_data[n].mixEnabled) g = pa_data[n].mixGain[data->myIndex];
+                if (g > 0) {
                     data->buffer_in[i].L += pa_data[n].wavRecord[(data->position << 1) + (i << 1)] * g;
-                    data->buffer_in[i].R += pa_data[n].wavRecord[(data->position << 1) + (i << 1) + 1] * g; } } }*/
+                    data->buffer_in[i].R += pa_data[n].wavRecord[(data->position << 1) + (i << 1) + 1] * g;
+                } } }
         } }
     else {
+        // Here it is when playback mode is selected
         // playback if wav of other tracks if wav was recorded
         for (quint64 i = 0; i < thisRead; i++) {
             data->buffer_in[i].L = 0;
             data->buffer_in[i].R = 0;
             // add playback from All tracks
             for (int n=0; n<nbInstru; n++) {
-                if ((pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback)) {
+                if ((pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback) && (pa_data[n].mixEnabled || (n == data->myIndex))) {
                     float g = pa_data[n].mixGain[data->myIndex];
                     if (n == data->myIndex) g = pa_data[n].G_Play;
                     data->buffer_in[i].L += pa_data[n].wavRecord[(data->position << 1) + (i << 1)] * g;
@@ -946,7 +949,8 @@ void MainWindow::ONOFF()
         pa_data[n].position = 0;
         if (Ecouteur[n]->currentIndex() != -1) none = false;
         else {
-            pa_data[n].mode = trackOff;
+            //if (pa_data[n].mode != Playback)
+            //pa_data[n].mode = trackOff;
             updateReplay(); }
         // search for fisrt device running for delay calculation
         if ((firstDevice == -1) && (Ecouteur[n]->currentIndex() != -1)) firstDevice = n;
@@ -1878,7 +1882,9 @@ void MainWindow::saveFiles(int track)
         setStyleSheet(Nom[n], loaded);
         setWindowTitle(title "File : " + newfName + " Saved");
         SaveTrack[n]->setEnabled(false);
-        pa_data[n].recorded = false; }
+        pa_data[n].recorded = false;
+        pa_data[n].fileLoaded = true;
+        }
         else ui->log->append(wavFileName + " could not be saved"); } }
     }
     if (fileSaved == 0) ui->log->append("Nothing to save");
@@ -1942,7 +1948,7 @@ void MainWindow::updateEcouteur(myCombo* select)
         if (Ecouteur[n] != select) {
             if (Ecouteur[n]->currentIndex() == select->currentIndex()) {
                 Ecouteur[n]->setCurrentIndex(-1);
-                pa_data[n].mode = trackOff; }
+                if (!((pa_data[n].fileLoaded == true) && (pa_data[n].mode == Playback))) pa_data[n].mode = trackOff; }
         }
         else index = n;
     }
