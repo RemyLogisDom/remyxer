@@ -29,7 +29,6 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-#define FRAME_SIZE 32
 #define EFFECT_SIZE 256 * FRAME_SIZE
 const QString recDir =  "Records";
 
@@ -166,6 +165,7 @@ private slots:
     void logToggle();
     void vuMeterToggle();
     void driverChanged(int);
+    void frameSizeChanged(int);
     void nextDownload();
     void mute();
     void saveFiles(int track = -1);

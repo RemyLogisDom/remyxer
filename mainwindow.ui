@@ -19,9 +19,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_3">
-    <item row="5" column="1" colspan="2">
-     <widget class="QComboBox" name="comboBoxDriver"/>
-    </item>
     <item row="4" column="0" rowspan="8">
      <widget class="QGroupBox" name="groupBox">
       <property name="sizePolicy">
@@ -216,8 +213,8 @@
       </layout>
      </widget>
     </item>
-    <item row="8" column="1">
-     <widget class="QLabel" name="labelDownloadSite">
+    <item row="11" column="1">
+     <widget class="QLabel" name="labelFTPpwd">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
         <horstretch>0</horstretch>
@@ -225,12 +222,12 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>Download site</string>
+       <string>FTP password</string>
       </property>
      </widget>
     </item>
-    <item row="9" column="2">
-     <widget class="QLineEdit" name="lineEditUploadSite">
+    <item row="8" column="2">
+     <widget class="QLineEdit" name="lineEditDownloadSite">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -241,9 +238,6 @@
        <string/>
       </property>
      </widget>
-    </item>
-    <item row="1" column="1" rowspan="4" colspan="2">
-     <widget class="QTextEdit" name="log"/>
     </item>
     <item row="9" column="1">
      <widget class="QLabel" name="labelUploadSite">
@@ -258,8 +252,43 @@
       </property>
      </widget>
     </item>
+    <item row="6" column="1">
+     <widget class="QLabel" name="labelFrameSize">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Frame size</string>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0">
      <widget class="QComboBox" name="comboBoxRecentFiles"/>
+    </item>
+    <item row="5" column="1" colspan="2">
+     <widget class="QComboBox" name="comboBoxDriver"/>
+    </item>
+    <item row="7" column="2">
+     <widget class="QSpinBox" name="spinBoxLatency">
+      <property name="suffix">
+       <string> ms</string>
+      </property>
+      <property name="minimum">
+       <number>10</number>
+      </property>
+      <property name="maximum">
+       <number>1000</number>
+      </property>
+      <property name="singleStep">
+       <number>5</number>
+      </property>
+      <property name="value">
+       <number>25</number>
+      </property>
+     </widget>
     </item>
     <item row="2" column="0">
      <widget class="QGroupBox" name="groupBox_2">
@@ -591,35 +620,21 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QScrollArea" name="scrollArea">
+    <item row="10" column="1">
+     <widget class="QLabel" name="labelFTPLogin">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
         <horstretch>0</horstretch>
-        <verstretch>40</verstretch>
+        <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
+      <property name="text">
+       <string>FTP Login</string>
       </property>
-      <property name="widgetResizable">
-       <bool>true</bool>
-      </property>
-      <widget class="QWidget" name="scrollAreaWidgetContents">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>0</y>
-         <width>730</width>
-         <height>159</height>
-        </rect>
-       </property>
-       <layout class="QGridLayout" name="gridLayout"/>
-      </widget>
      </widget>
     </item>
-    <item row="8" column="2">
-     <widget class="QLineEdit" name="lineEditDownloadSite">
+    <item row="9" column="2">
+     <widget class="QLineEdit" name="lineEditUploadSite">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -644,8 +659,35 @@
       </property>
      </widget>
     </item>
-    <item row="10" column="1">
-     <widget class="QLabel" name="labelFTPLogin">
+    <item row="1" column="0">
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>40</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>730</width>
+         <height>104</height>
+        </rect>
+       </property>
+       <layout class="QGridLayout" name="gridLayout"/>
+      </widget>
+     </widget>
+    </item>
+    <item row="7" column="1">
+     <widget class="QLabel" name="labelLatency">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
         <horstretch>0</horstretch>
@@ -653,12 +695,12 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>FTP Login</string>
+       <string>Latency</string>
       </property>
      </widget>
     </item>
-    <item row="11" column="1">
-     <widget class="QLabel" name="labelFTPpwd">
+    <item row="8" column="1">
+     <widget class="QLabel" name="labelDownloadSite">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
         <horstretch>0</horstretch>
@@ -666,7 +708,29 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>FTP password</string>
+       <string>Download site</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1" rowspan="4" colspan="2">
+     <widget class="QTextEdit" name="log"/>
+    </item>
+    <item row="6" column="2">
+     <widget class="QSpinBox" name="spinBoxFrameSize">
+      <property name="suffix">
+       <string/>
+      </property>
+      <property name="minimum">
+       <number>16</number>
+      </property>
+      <property name="maximum">
+       <number>1024</number>
+      </property>
+      <property name="singleStep">
+       <number>16</number>
+      </property>
+      <property name="value">
+       <number>256</number>
       </property>
      </widget>
     </item>

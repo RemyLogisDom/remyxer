@@ -40,9 +40,16 @@ sudo apt install libportaudio2
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+int FRAME_SIZE = 256;
+
+/*struct mix_frame
+{
+    sf_sample_st frame[32];
+};*/
+
 struct mix_frame
 {
-    sf_sample_st frame[FRAME_SIZE];
+    sf_sample_st *frame= new sf_sample_st[FRAME_SIZE];
 };
 
 struct mix_track_list
@@ -110,7 +117,7 @@ int SAMPLE_RATE = 48000;
 
 #define positionBegin loop_begin
 #define positionEnd loop_end
-#define title "Remyxer 1.06"
+#define title "Remyxer 1.07"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
@@ -131,10 +138,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->comboBoxDriver->hide();
     ui->labelFTPLogin->hide();
     ui->labelFTPpwd->hide();
+    ui->labelLatency->hide();
+    ui->spinBoxLatency->hide();
+    ui->labelFrameSize->hide();
+    ui->spinBoxFrameSize->hide();
     ui->lineEditFTPLogin->hide();
     ui->buttonSave->setEnabled(false);
     pwd->hide();
-
     ui->buttonInit->hide();
     setFocus();
 
@@ -170,6 +180,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->buttonLog, SIGNAL(clicked()), this, SLOT(logToggle()));
     connect(ui->buttonVuMeter, SIGNAL(clicked()), this, SLOT(vuMeterToggle()));
     connect(ui->comboBoxDriver, SIGNAL(currentIndexChanged(int)), this, SLOT(driverChanged(int)));
+    connect(ui->spinBoxFrameSize, SIGNAL(valueChanged(int)), this, SLOT(frameSizeChanged(int)));
 
     downloadTimer.setSingleShot(true);
     connect(&downloadTimer, SIGNAL(timeout()), this, SLOT(nextDownload()));
@@ -510,6 +521,14 @@ void MainWindow::loadConfig()
     for (int index=0; index<nb; index++) newDevice();
     bool M = settings.value(QString::fromUtf8("/MixEnabled")).toBool();
     if (ok && M) { mixToggle(); }
+    QString l = settings.value(QString("/Latency")).toString();
+    int L = l.toInt(&ok);
+    if (ok) ui->spinBoxLatency->setValue(L);
+    QString f = settings.value(QString("/FrameSize")).toString();
+    int F = f.toInt(&ok);
+    if (ok) {
+        ui->spinBoxFrameSize->setValue(F);
+        FRAME_SIZE = F; }
     bool SR = settings.value(QString::fromUtf8("/44k")).toBool();
     if (ok && SR) ui->radioButton44->setChecked(true);
     if (ui->radioButton48->isChecked()) SAMPLE_RATE = 48000; else SAMPLE_RATE = 44100;
@@ -604,6 +623,8 @@ void MainWindow::saveConfig()
     QSettings settings("Remyxer.ini", QSettings::IniFormat);
     settings.setValue(QString::fromUtf8("/nbInstru"), nbInstru );
     settings.setValue(QString::fromUtf8("/MixEnabled"), mixEnabled);
+    settings.setValue(QString::fromUtf8("/Latency"), ui->spinBoxLatency->value());
+    settings.setValue(QString::fromUtf8("/FrameSize"), ui->spinBoxFrameSize->value());
     settings.setValue(QString::fromUtf8("/44k"), ui->radioButton44->isChecked() );
     settings.setValue(QString::fromUtf8("/geometry/width"), width() );
     settings.setValue(QString::fromUtf8("/geometry/height"), height() );
@@ -1002,6 +1023,8 @@ void MainWindow::ON()
     ui->buttonSave->setEnabled(false);
     ui->radioButton44->setEnabled(false);
     ui->radioButton48->setEnabled(false);
+    ui->spinBoxLatency->setEnabled(false);
+    ui->spinBoxFrameSize->setEnabled(false);
     ui->buttonSearchDevice->setEnabled(false);
     ui->buttonMetronome->setEnabled(false);
     ui->buttonWebUpdate->setEnabled(false);
@@ -1078,6 +1101,11 @@ void MainWindow::initToggle()
     ui->buttonInit->setChecked(initEnabled);
 }
 
+
+void MainWindow::frameSizeChanged(int s)
+{
+    FRAME_SIZE = s;
+}
 
 
 void MainWindow::driverChanged(int driver)
@@ -1179,6 +1207,12 @@ void MainWindow::logToggle()
         ui->labelFTPpwd->show();
         ui->lineEditFTPLogin->show();
         pwd->show();
+        ui->spinBoxLatency->show();
+        ui->labelLatency->show();
+        ui->spinBoxLatency->show();
+        ui->labelLatency->show();
+        ui->labelFrameSize->show();
+        ui->spinBoxFrameSize->show();
     }
     else
     {
@@ -1192,6 +1226,10 @@ void MainWindow::logToggle()
         ui->labelFTPpwd->hide();
         ui->lineEditFTPLogin->hide();
         pwd->hide();
+        ui->spinBoxLatency->hide();
+        ui->labelLatency->hide();
+        ui->labelFrameSize->hide();
+        ui->spinBoxFrameSize->hide();
     }
 }
 
@@ -1659,12 +1697,12 @@ void MainWindow::playNow()
 
             outputParameters[n].channelCount = 2; //pa_data[n].sfInfo.channels; /* use the same number of channels as our sound file */
             outputParameters[n].sampleFormat = paFloat32;
-            outputParameters[n].suggestedLatency = outputInfo[n]->defaultLowOutputLatency; //0.1; /* 100 ms */
+            outputParameters[n].suggestedLatency = double(ui->spinBoxLatency->value())/1000; //outputInfo[n]->defaultLowOutputLatency; //0.1; /* 100 ms */
             outputParameters[n].hostApiSpecificStreamInfo = 0; /* no api specific data */
 
             inputParameters[n].channelCount = 1;
             inputParameters[n].sampleFormat = paFloat32;
-            inputParameters[n].suggestedLatency = inputInfo[n]->defaultLowInputLatency; //0.1; /* 100 ms */
+            inputParameters[n].suggestedLatency = double(ui->spinBoxLatency->value())/1000; //inputInfo[n]->defaultLowInputLatency; //0.1; /* 100 ms */
             inputParameters[n].hostApiSpecificStreamInfo = 0; /* no api specific data */
             ui->log->append(outputInfo[n]->name + QString(" Max input channels %1").arg(inputInfo[n]->maxInputChannels) + QString("  I:%1  ").arg(inputInfo[n]->defaultSampleRate) + QString("  O:%1  ").arg(outputInfo[n]->defaultSampleRate));
         }
@@ -1769,6 +1807,8 @@ void MainWindow::stop()
         ui->buttonSave->setEnabled(true);
         ui->radioButton44->setEnabled(true);
         ui->radioButton48->setEnabled(true);
+        ui->spinBoxLatency->setEnabled(true);
+        ui->spinBoxFrameSize->setEnabled(true);
         return;
     }
     bool rec = false;
@@ -1798,6 +1838,8 @@ void MainWindow::stop()
     ui->buttonSave->setEnabled(true);
     ui->radioButton44->setEnabled(true);
     ui->radioButton48->setEnabled(true);
+    ui->spinBoxLatency->setEnabled(true);
+    ui->spinBoxFrameSize->setEnabled(true);
 
     Pa_Terminate();
     Runing = false;
