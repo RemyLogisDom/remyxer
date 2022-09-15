@@ -16,6 +16,7 @@
 #include <QTimer>
 #include <QDir>
 #include <QSpinBox>
+#include <QCheckBox>
 #include <QFileDialog>
 #include <QBuffer>
 #include "include/qvumeter.h"
@@ -79,7 +80,10 @@ public:
     QPushButton *FtpUpload[nbInstruMax];
     QPushButton *ModeButton[nbInstruMax];
     QDialog *mixSetup[nbInstruMax];
+    bool mixAlreadyShowed[nbInstruMax];
     QSpinBox *MixSend[nbInstruMax][nbInstruMax];
+    int mixValue[nbInstruMax][nbInstruMax];
+    QCheckBox *mixCheckAllChannels[nbInstruMax], *mixCheckAll[nbInstruMax];
     myCombo *Ecouteur[nbInstruMax];
     myCombo *Micro[nbInstruMax];
     QString EcouteurSaved[nbInstruMax];
@@ -145,6 +149,9 @@ private:
     QString checkWavFiles(QString);
     QTimer downloadTimer;
     QString searchDevice();
+    QSpinBox *lastSpinChanged = nullptr;
+    int lastSpinValue = 0;
+    QPoint lastMixOpened;
 private slots:
     void chooseFile();
     void ONOFF();
@@ -177,6 +184,7 @@ private slots:
     void uploadThisTrack(QPushButton *);
     void nomChanged(QLineEdit *);
     void mixChanged(int);
+    void mixAsChanged(QSpinBox *);
     void updateReverb(QComboBox *);
     void updateEcouteur(myCombo *);
     void updateMicro(myCombo *);

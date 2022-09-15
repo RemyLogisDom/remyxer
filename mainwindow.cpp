@@ -33,6 +33,7 @@ sudo apt install libportaudio2
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QAudioDecoder>
+#include <QDesktopWidget>
 #include <QSettings>
 #include "include/AudioIO.hh"
 #include "include/reverb.c"
@@ -245,9 +246,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             if (ok) MixSend[i][n]->setValue(mix);
             if (mix == -41) pa_data[n].mixGain[i] = 0;
             else pa_data[n].mixGain[i] = double(pow(10.0, double(mix /20.0)));
-            connect(MixSend[n][i], SIGNAL(valueChanged(int)), this, SLOT(mixChanged(int))); } }
+            connect(MixSend[n][i], SIGNAL(valueChanged(int)), this, SLOT(mixChanged(int)));
+            connect(MixSend[n][i], QOverload<int>::of(&QSpinBox::valueChanged), [=] { mixAsChanged( MixSend[n][i] );  } );
+        } }
     OFF();
 }
+
 
 
 MainWindow::~MainWindow()
@@ -536,15 +540,23 @@ void MainWindow::loadConfig()
     if (!audioDriver.isEmpty()) ui->comboBoxDriver->setCurrentText(audioDriver);
     for (int n=0; n<nbInstru; n++) {
         mixSetup[n] = new QDialog();
+        mixAlreadyShowed[n] = false;
+        mixCheckAll[n] = new QCheckBox();
+        mixCheckAll[n]->setText("change All");
+        mixCheckAllChannels[n] = new QCheckBox();
+        mixCheckAllChannels[n]->setText("change All channels");
         QGridLayout *layout = new QGridLayout(mixSetup[n]);
+        layout->addWidget(mixCheckAll[n], 0, 0, 1, 1);
+        layout->addWidget(mixCheckAllChannels[n], 0, 2, 1, 1);
         for (int i=0; i<nbInstru; i++) {
             MixSend[n][i] = new QSpinBox();
+            mixValue[n][i] = -99;
             MixSend[n][i]->setRange(-41, 20);
             MixSend[n][i]->setSpecialValueText(Nom[i]->text() +  " : OFF");
             MixSend[n][i]->setValue(-41);
             MixSend[n][i]->setPrefix((Nom[i]->text() +  " : "));
             MixSend[n][i]->setSuffix((" dB"));
-            layout->addWidget(MixSend[n][i], i/4, i%4, 1, 1);
+            layout->addWidget(MixSend[n][i], i/4 + 1, i%4, 1, 1);
         if (n == i) MixSend[n][i]->setEnabled(false); }
         pa_data[n].mix_send_Vol = new int[nbInstru];
         for (int i=0; i<nbInstru; i++) pa_data[n].mix_send_Vol[i] = 0;
@@ -554,6 +566,7 @@ void MainWindow::loadConfig()
         QString str = settings.value(QString("/nom/%1").arg(n+1)).toString();
         if (!str.isEmpty()) Nom[n]->setText(str);
         mixSetup[n]->setWindowTitle(Nom[n]->text());
+
         QString device = settings.value(QString("/ecouteur/%1").arg(n+1)).toString();
         EcouteurSaved[n] = device;
         Ecouteur[n]->setCurrentText(device);
@@ -577,9 +590,20 @@ void MainWindow::loadConfig()
         str = settings.value(QString("/levelOut/%1").arg(n+1)).toString();
         v = str.toInt(&ok);
         if (ok) L_Out[n]->setValue(v);
+
         str = settings.value(QString("/reverbType/%1").arg(n+1)).toString();
         v = str.toInt(&ok);
         if (ok) ReverbSelect[n]->setCurrentIndex(v);
+
+        str = settings.value(QString("/MixWindowPosX/%1").arg(n+1)).toString();
+        int x = str.toInt(&ok);
+        if (ok) {
+            str = settings.value(QString("/MixWindowPosY/%1").arg(n+1)).toString();
+            int y = str.toInt(&ok);
+            if (ok && (x != 0) && (y != 0)) {
+                mixSetup[n]->move(QPoint(x, y));
+                mixAlreadyShowed[n] = true; }
+            }
 
         bool M = settings.value(QString("/MixEnabled/%1").arg(n+1)).toBool();
         if (ok && M) { pa_data[n].mixEnabled = true; }
@@ -646,6 +670,8 @@ void MainWindow::saveConfig()
         settings.setValue(QString("/levelOut/%1").arg(n+1), L_Out[n]->value());
         settings.setValue(QString("/reverbType/%1").arg(n+1), ReverbSelect[n]->currentIndex());
         settings.setValue(QString("/MixEnabled/%1").arg(n+1), pa_data[n].mixEnabled);
+        settings.setValue(QString("/MixWindowPosX/%1").arg(n+1), mixSetup[n]->geometry().x());
+        settings.setValue(QString("/MixWindowPosY/%1").arg(n+1), mixSetup[n]->geometry().y());
         for (int i=0; i<nbInstru; i++) {
             QString name = Nom[n]->text();
             settings.setValue(QString("/mix_" + name + "/%1").arg(i+1), MixSend[n][i]->value());  }
@@ -2246,6 +2272,53 @@ void MainWindow::ftpUploadProgress(qint64 progress, qint64 total)
 
 
 
+void MainWindow::mixAsChanged(QSpinBox *mix)
+{
+    for (int n=0; n<nbInstru; n++) {
+        for (int i=0; i<nbInstru; i++) {
+        if (MixSend[n][i] == mix) {
+            int delta = MixSend[n][i]->value() - mixValue[n][i] ;
+            mixValue[n][i] = MixSend[n][i]->value();
+            if (mixCheckAllChannels[n]->isChecked())
+            {
+                for (int x=0; x<nbInstru; x++) {
+                    if ((x != n) && (x != pa_data[i].myIndex)) {
+                        disconnect(MixSend[x][i], 0, 0, 0);
+                        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                            MixSend[x][i]->setValue(mix->value());
+                        }
+                        else {
+                            if (delta > 0) MixSend[x][i]->setValue(MixSend[x][i]->value() + 1);
+                            if (delta < 0) MixSend[x][i]->setValue(MixSend[x][i]->value() - 1);
+                        }
+                        connect(MixSend[x][i], SIGNAL(valueChanged(int)), this, SLOT(mixChanged(int)));
+                        connect(MixSend[x][i], QOverload<int>::of(&QSpinBox::valueChanged), [=] { mixAsChanged( MixSend[x][i] );  } );
+                    }
+                }
+            }
+                if (mixCheckAll[n]->isChecked())
+            {
+                for (int x=0; x<nbInstru; x++) {
+                    if (x != n) {
+                        disconnect(MixSend[n][x], 0, 0, 0);
+                        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                            MixSend[n][x]->setValue(mix->value());
+                        }
+                        else {
+                            if (delta > 0) MixSend[n][x]->setValue(MixSend[n][x]->value() + 1);
+                            if (delta < 0) MixSend[n][x]->setValue(MixSend[n][x]->value() - 1);
+                        }
+                        connect(MixSend[n][x], SIGNAL(valueChanged(int)), this, SLOT(mixChanged(int)));
+                        connect(MixSend[n][x], QOverload<int>::of(&QSpinBox::valueChanged), [=] { mixAsChanged( MixSend[n][x] );  } );
+                    }
+                }
+            }
+            return;
+        } }
+    }
+}
+
+
 void MainWindow::saveThisTrack(QPushButton* button)
 {
     for (int n=0; n<nbInstru; n++) {
@@ -2289,7 +2362,20 @@ void MainWindow::showMix(QPushButton* button)
     if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
         for (int n=0; n<nbInstru; n++) {
             if (Mix[n] == button) {
+                if (lastMixOpened == QPoint(0, 0)) lastMixOpened = QPoint(300, 100);
+                if (!mixAlreadyShowed[n]) {
+                    QDesktopWidget *desktopWidget = QApplication::desktop();
+                    QRect screenRect = desktopWidget->screenGeometry(mixSetup[n]);
+                    if (screenRect.contains(lastMixOpened)) {
+                        mixSetup[n]->move(lastMixOpened);
+                        lastMixOpened.setX(lastMixOpened.x() + 60);
+                        lastMixOpened.setY(lastMixOpened.y() + 60); }
+                    else {
+                        lastMixOpened = QPoint(330, 130);
+                        mixSetup[n]->move(lastMixOpened);  }
+                    }
                 mixSetup[n]->show();
+                mixAlreadyShowed[n] = true;
                 return; } } }
     for (int n=0; n<nbInstru; n++) {
         if (Mix[n] == button) {
@@ -2449,6 +2535,7 @@ void MainWindow::mixChanged(int)
     for (int n=0; n<nbInstru; n++) {
         for (int i=0; i<nbInstru; i++) {
             int mix = MixSend[n][i]->value();
+            if (mixValue[n][i] == -99) mixValue[n][i] = mix;
             if (mix == -41) pa_data[n].mixGain[i] = 0;
             else pa_data[n].mixGain[i] = double(pow(10.0, double(mix /20.0)));
         }
