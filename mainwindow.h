@@ -75,6 +75,7 @@ public:
     PasswordLineEdit *pwd;
     PaStreamParameters inputParameters[nbInstruMax], outputParameters[nbInstruMax];
     PaStream *Stream[nbInstruMax];
+    QCheckBox *reverbOnly[nbInstruMax];
     QPushButton *Mix[nbInstruMax];
     QPushButton *SaveTrack[nbInstruMax];
     QPushButton *FtpUpload[nbInstruMax];
@@ -190,6 +191,7 @@ private slots:
     void updateMicro(myCombo *);
     void loopRecordChanged(int);
     void loopEnable(int);
+    void reverbOnlyChanged(int);
     void recentListSelect(int);
     void beginChanged(QTime);
     void endChanged(QTime);

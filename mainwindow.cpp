@@ -94,6 +94,7 @@ struct pa_Data
      bool runing = false;
      bool fileLoaded = false;
      bool mixEnabled = false;
+     bool reverbOnly = false;
 };
 
 sf_sample_st *wav_st = nullptr;     // pointer of an array of sample used for recording, will be initialize to sound size
@@ -118,7 +119,7 @@ int SAMPLE_RATE = 48000;
 
 #define positionBegin loop_begin
 #define positionEnd loop_end
-#define title "Remyxer 1.07"
+#define title "Remyxer 1.08"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
@@ -423,7 +424,7 @@ void MainWindow::newDevice()
     ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 1);
     ui->gridLayout->addWidget(Micro[index], index*2, x+1, 1, 1);
 #else
-    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 3);
+    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 4);
 #endif
     L_In[index] = new QSpinBox(ui->groupBox);
     L_In[index]->setMinimum(-40);
@@ -441,6 +442,10 @@ void MainWindow::newDevice()
     L_Out[index]->setPrefix("Out : ");
     L_Out[index]->setFocusPolicy(Qt::ClickFocus);
     ui->gridLayout->addWidget(L_Out[index], index*2+1, x++, 1, 1);
+    reverbOnly[index] = new QCheckBox;
+    reverbOnly[index]->setText("Reverb only");
+    ui->gridLayout->addWidget(reverbOnly[index], index*2+1, x++, 1, 1);
+    connect(reverbOnly[index], SIGNAL(stateChanged(int)), this, SLOT(reverbOnlyChanged(int)));
     frameIndex[index] = new QLabel(ui->groupBox);
     frameIndex[index]->setText("...");
     frameIndex[index]->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
@@ -772,7 +777,9 @@ int MainWindow::Callback(const void *input,
             // add playback from other tracks
             // not needed any more since track inter mix
             //if (data->mixEnabled && mixEnabled && (!Paused)) {
-            if (mixEnabled && (!Paused)) {
+            //change 15/09/2022
+            //if (mixEnabled && (!Paused)) {
+            if (mixEnabled && data->mixEnabled) {
             for (int n=0; n<nbInstru; n++) {
                 float g = 0;
                 if (n == data->myIndex) g = 0; //pa_data[n].G_Play;
@@ -790,7 +797,7 @@ int MainWindow::Callback(const void *input,
             data->buffer_in[i].R = 0;
             // add playback from All tracks
             for (int n=0; n<nbInstru; n++) {
-                if ((pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback) && (pa_data[n].mixEnabled || (n == data->myIndex))) {
+                if ((mixEnabled || (n == data->myIndex)) && (pa_data[n].wavRecord != nullptr) && (pa_data[n].mode == Playback) && (pa_data[n].mixEnabled || (n == data->myIndex))) {
                     float g = pa_data[n].mixGain[data->myIndex];
                     if (n == data->myIndex) g = pa_data[n].G_Play;
                     data->buffer_in[i].L += pa_data[n].wavRecord[(data->position << 1) + (i << 1)] * g;
@@ -802,7 +809,7 @@ int MainWindow::Callback(const void *input,
 
     // Create new frames and copy one new frame to each other tracks with apropriate gain
     // if mix enabled copy input buffer to all other output mix matrix with its specific gain
-    if (data->mixEnabled && mixEnabled) {
+    if (mixEnabled && data->mixEnabled) {
     for (int n = 0; n < nbInstru; n++) {
         if ((n != data->myIndex) && (data->mode != trackOff)) {
             if (pa_data[n].runing) {
@@ -824,8 +831,11 @@ int MainWindow::Callback(const void *input,
             *cursor++ = 0; }
         } else {
             for (quint64 i = 0; i < thisRead; i++) {
-                float L = data->buffer_in[i].L;
-                float R = data->buffer_in[i].R;
+                float L = 0;
+                float R = 0;
+                if (!data->reverbOnly) {
+                L = data->buffer_in[i].L;
+                R = data->buffer_in[i].R; }
             // Mix all other tracks to hear others even when paused
             for (int n = 0; n < nbInstru; n++) {
                 if (n != data->myIndex) {
@@ -833,11 +843,11 @@ int MainWindow::Callback(const void *input,
                     L += mix_track_Hor_Vert[n][data->myIndex].mix_send_list.first()->frame[i].L;
                     R += mix_track_Hor_Vert[n][data->myIndex].mix_send_list.first()->frame[i].R; } } }
             // set vumeter level
-                if (L > data->levelLeft) data->levelLeft = L;
-                if (R > data->levelRight) data->levelRight = R;
+                if (data->buffer_in[i].L > data->levelLeft) data->levelLeft = data->buffer_in[i].L;
+                if (data->buffer_in[i].R > data->levelRight) data->levelRight = data->buffer_in[i].R;
                 if (data->reverb) {
-                    *cursor++ = (L + data->buffer_out[i].L) / 2;
-                    *cursor++ = (R + data->buffer_out[i].R) / 2;
+                    *cursor++ = (L + data->buffer_out[i].L);
+                    *cursor++ = (R + data->buffer_out[i].R);
                 }
                 else { *cursor++ = L; *cursor++ = R; }
             }
@@ -861,9 +871,9 @@ int MainWindow::Callback(const void *input,
     } else {
     for (quint64 i = 0; i < thisRead; i++) {
             float L = wav_st[data->position + i].L * data->G_Wav * !muteState;
-            if (data->reverb) L += (data->buffer_in[i].L + data->buffer_out[i].L) / 2; else L += data->buffer_in[i].L;
+            if (data->reverb) L += (data->buffer_in[i].L + data->buffer_out[i].L); else if (!data->reverbOnly) L += data->buffer_in[i].L;
             float R = wav_st[data->position + i].R * data->G_Wav * !muteState;
-            if (data->reverb) R += (data->buffer_in[i].R + data->buffer_out[i].R) / 2; else R += data->buffer_in[i].R;
+            if (data->reverb) R += (data->buffer_in[i].R + data->buffer_out[i].R); else if (!data->reverbOnly) R += data->buffer_in[i].R;
         // Mix all other tracks
         for (int n = 0; n < nbInstru; n++) {
             if (n != data->myIndex) {
@@ -1299,6 +1309,14 @@ void MainWindow::loopRecordChanged(int)
     setFocus();
 }
 
+
+
+void MainWindow::reverbOnlyChanged(int)
+{
+    for (int n=0; n<nbInstru; n++) {
+        if (reverbOnly[n]->isChecked()) pa_data[n].reverbOnly = true;
+        else pa_data[n].reverbOnly =false; }
+}
 
 
 void MainWindow::loopEnable(int)
