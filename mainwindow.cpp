@@ -1497,7 +1497,7 @@ nameAgain:
         }
     int64_t wavSize = t * SAMPLE_RATE;
     float *wav_st = new float[wavSize * 2];
-    int sampleClic = SAMPLE_RATE / (bpm / 60);
+    int sampleClic = SAMPLE_RATE * 60 / bpm;
     for (int n=0; n<wavSize * 2; n++) { wav_st[n] = 0; }
     for (int n=0; n<wavSize * 2; n+=sampleClic * 2) {
         for (int i=0; i<ticSize; i+=1) {
