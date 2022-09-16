@@ -1375,7 +1375,7 @@ int64_t MainWindow::loadWavFile(QString fileName, float *&wavSound, bool &conver
     converted = true;
     int64_t wavSize = 0;
     SF_INFO sfInfo;
-    SNDFILE *sndFile = sf_open(fileName.toLatin1(), SFM_READ, &sfInfo);
+    SNDFILE *sndFile = sf_open(fileName.toLocal8Bit(), SFM_READ, &sfInfo);
     if (!sndFile) { ui->log->append(fileName + " file not found"); return 0; }
     int64_t frames = sfInfo.frames;
     if (sfInfo.channels != 2) {
