@@ -76,7 +76,9 @@ struct pa_Data
      float G_In = 1;
      float G_Play = 1;
      float G_Rec = 1;
+     float G_RevLev = 1;
      int RecVol = 0;
+     int RevLev = 0;
      int PlayVol = 0;
      int ListenVol = 0;
      float G_Wav = 1;
@@ -111,6 +113,7 @@ quint64 loop_end = -1;
 bool mixEnabled = false;
 bool initEnabled = false;
 int64_t Frames = 0;
+
 
 int instru = -1;
 pa_Data pa_data[nbInstruMax];
@@ -393,7 +396,6 @@ void MainWindow::newDevice()
     ui->gridLayout->addWidget(Nom[index], index*2, x, 1, 3);
     Mix[index] = new QPushButton(ui->groupBox);
     connect(Mix[index], &QPushButton::clicked, [=] { showMix( Mix[index] );  } );
-    //Mix[index]->setText("------->");
     Mix[index]->setIcon(QPixmap(":/images/mixer"));
     Mix[index]->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     Mix[index]->setFocusPolicy(Qt::ClickFocus);
@@ -421,10 +423,10 @@ void MainWindow::newDevice()
     Micro[index] = new myCombo();
     Micro[index]->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN)
-    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 1);
-    ui->gridLayout->addWidget(Micro[index], index*2, x+1, 1, 1);
+    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 2);
+    ui->gridLayout->addWidget(Micro[index], index*2, x+2, 1, 3);
 #else
-    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 4);
+    ui->gridLayout->addWidget(Ecouteur[index], index*2, x, 1, 5);
 #endif
     L_In[index] = new QSpinBox(ui->groupBox);
     L_In[index]->setMinimum(-40);
@@ -439,9 +441,21 @@ void MainWindow::newDevice()
     L_Out[index]->setMinimum(-40);
     L_Out[index]->setMaximum(20);
     L_Out[index]->setSuffix(" dB");
-    L_Out[index]->setPrefix("Out : ");
+    L_Out[index]->setStyleSheet("QSpinBox { background-color:#ffd866 }");
+    L_Out[index]->setPrefix("File : ");
     L_Out[index]->setFocusPolicy(Qt::ClickFocus);
     ui->gridLayout->addWidget(L_Out[index], index*2+1, x++, 1, 1);
+
+    Reverb_Level[index] = new QSpinBox(ui->groupBox);
+    Reverb_Level[index]->setMinimum(-40);
+    Reverb_Level[index]->setMaximum(20);
+    Reverb_Level[index]->setSuffix(" dB");
+    Reverb_Level[index]->setPrefix("Reverb : ");
+    Reverb_Level[index]->setFocusPolicy(Qt::ClickFocus);
+    Reverb_Level[index]->setStyleSheet("QSpinBox { background-color: lightgrey }");
+
+    ui->gridLayout->addWidget(Reverb_Level[index], index*2+1, x++, 1, 1);
+
     reverbOnly[index] = new QCheckBox;
     reverbOnly[index]->setText("Reverb only");
     ui->gridLayout->addWidget(reverbOnly[index], index*2+1, x++, 1, 1);
@@ -457,10 +471,12 @@ void MainWindow::newDevice()
     vuMeter[index]->setFocusPolicy(Qt::NoFocus);
     ui->gridLayout->addWidget(vuMeter[index], index*2, x++, 2, 4);
     vuMeter[index]->setEnabled(false);
+    //vuMeter[index]->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
     x+=4;
     ui->gridLayout->addWidget(ModeButton[index], index*2, x, 1, 1);
     connect(L_In[index], SIGNAL(valueChanged(int)), this, SLOT(updateLevel()));
     connect(L_Out[index], SIGNAL(valueChanged(int)), this, SLOT(updateLevel()));
+    connect(Reverb_Level[index], SIGNAL(valueChanged(int)), this, SLOT(updateReverb()));
     ReverbSelect[index] = new QComboBox(ui->groupBox);
     ReverbSelect[index]->addItem("None");
     ReverbSelect[index]->addItem("Default");
@@ -588,6 +604,10 @@ void MainWindow::loadConfig()
         v = str.toInt(&ok);
         if (ok) pa_data[n].RecVol = v;
 
+        str = settings.value(QString("/RevLev/%1").arg(n+1)).toString();
+        v = str.toInt(&ok);
+        if (ok) { pa_data[n].RevLev = v; Reverb_Level[n]->setValue(v); }
+
         str = settings.value(QString("/PlayVol/%1").arg(n+1)).toString();
         v = str.toInt(&ok);
         if (ok) pa_data[n].PlayVol = v;
@@ -611,8 +631,11 @@ void MainWindow::loadConfig()
             }
 
         bool M = settings.value(QString("/MixEnabled/%1").arg(n+1)).toBool();
-        if (ok && M) { pa_data[n].mixEnabled = true; }
+        if (M) { pa_data[n].mixEnabled = true; }
         if (pa_data[n].mixEnabled) setStyleSheet(Mix[n], mixOn); else setStyleSheet(Mix[n], mixOff);
+
+        bool R = settings.value(QString("/ReverbOnly/%1").arg(n+1)).toBool();
+        if (R) { reverbOnly[n]->setCheckState(Qt::Checked); pa_data[n].reverbOnly = true; }
 
         updateReverb(ReverbSelect[n]); }
 
@@ -671,12 +694,14 @@ void MainWindow::saveConfig()
         else settings.setValue(QString("/micro/%1").arg(n+1), Micro[n]->currentText());
         settings.setValue(QString("/ListenVol/%1").arg(n+1), pa_data[n].ListenVol);
         settings.setValue(QString("/RecVol/%1").arg(n+1), pa_data[n].RecVol);
+        settings.setValue(QString("/RevLev/%1").arg(n+1), pa_data[n].RevLev);
         settings.setValue(QString("/PlayVol/%1").arg(n+1), pa_data[n].PlayVol);
         settings.setValue(QString("/levelOut/%1").arg(n+1), L_Out[n]->value());
         settings.setValue(QString("/reverbType/%1").arg(n+1), ReverbSelect[n]->currentIndex());
         settings.setValue(QString("/MixEnabled/%1").arg(n+1), pa_data[n].mixEnabled);
         settings.setValue(QString("/MixWindowPosX/%1").arg(n+1), mixSetup[n]->geometry().x());
         settings.setValue(QString("/MixWindowPosY/%1").arg(n+1), mixSetup[n]->geometry().y());
+        settings.setValue(QString("/ReverbOnly/%1").arg(n+1), pa_data[n].reverbOnly);
         for (int i=0; i<nbInstru; i++) {
             QString name = Nom[n]->text();
             settings.setValue(QString("/mix_" + name + "/%1").arg(i+1), MixSend[n][i]->value());  }
@@ -846,8 +871,8 @@ int MainWindow::Callback(const void *input,
                 if (data->buffer_in[i].L > data->levelLeft) data->levelLeft = data->buffer_in[i].L;
                 if (data->buffer_in[i].R > data->levelRight) data->levelRight = data->buffer_in[i].R;
                 if (data->reverb) {
-                    *cursor++ = (L + data->buffer_out[i].L);
-                    *cursor++ = (R + data->buffer_out[i].R);
+                    *cursor++ = (L + (data->buffer_out[i].L * data->G_RevLev));
+                    *cursor++ = (R + (data->buffer_out[i].R * data->G_RevLev));
                 }
                 else { *cursor++ = L; *cursor++ = R; }
             }
@@ -871,9 +896,9 @@ int MainWindow::Callback(const void *input,
     } else {
     for (quint64 i = 0; i < thisRead; i++) {
             float L = wav_st[data->position + i].L * data->G_Wav * !muteState;
-            if (data->reverb) L += (data->buffer_in[i].L + data->buffer_out[i].L); else if (!data->reverbOnly) L += data->buffer_in[i].L;
+            if (data->reverb) L += (data->buffer_in[i].L + data->buffer_out[i].L); else if (!data->reverbOnly) L += data->buffer_in[i].L * data->G_RevLev;
             float R = wav_st[data->position + i].R * data->G_Wav * !muteState;
-            if (data->reverb) R += (data->buffer_in[i].R + data->buffer_out[i].R); else if (!data->reverbOnly) R += data->buffer_in[i].R;
+            if (data->reverb) R += (data->buffer_in[i].R + data->buffer_out[i].R); else if (!data->reverbOnly) R += data->buffer_in[i].R * data->G_RevLev;
         // Mix all other tracks
         for (int n = 0; n < nbInstru; n++) {
             if (n != data->myIndex) {
@@ -1566,9 +1591,9 @@ void MainWindow::setFile(QString str)
     }
     delete[] wavDataFile;
     sf_close(sndFile);
-    if (Frames < sfInfo.frames) {
-        ui->log->append("file could not be loaded completly");
-        return; }
+    //if (Frames < sfInfo.frames) {
+    //    ui->log->append("file could not be loaded completly");
+    //    return; }
     if (converted) {
         QMessageBox msgBox;
         msgBox.setText("File was converted\nFor better quality you should change sampling rate\nif output device is compatible");
@@ -1903,12 +1928,12 @@ void MainWindow::updateT()
         ui->wavSlider->setValue(c); } }
     for (int n=0; n<nbInstru; n++) {
         if (vuMeterEnable) {
-        vuMeter[n]->setLeftValue(pa_data[n].levelLeft);
-        if (pa_data[n].levelLeft > 1) pa_data[n].levelLeft = 1;
-        if (pa_data[n].levelRight > 1) pa_data[n].levelRight = 1;
-        pa_data[n].levelLeft /= 2;
-        vuMeter[n]->setRightValue(pa_data[n].levelRight);
-        pa_data[n].levelRight /= 2; }
+            if (pa_data[n].levelLeft > 1) pa_data[n].levelLeft = 1;
+            if (pa_data[n].levelRight > 1) pa_data[n].levelRight = 1;
+            vuMeter[n]->setLeftValue(pa_data[n].levelLeft);
+            vuMeter[n]->setRightValue(pa_data[n].levelRight);
+            pa_data[n].levelLeft /= 2;
+            pa_data[n].levelRight /= 2; }
         if (firstDevice != -1) {
             qint64 d = qint64(pa_data[n].position - pa_data[firstDevice].position)/48;
             if (delayMean[n] > 5) pa_data[n].position -=5;
@@ -2660,10 +2685,19 @@ void MainWindow::updateReplay(QPushButton* button)
 }
 
 
+
+void MainWindow::updateReverb()
+{
+    for (int n=0; n<nbInstru; n++) {
+        pa_data[n].RevLev = Reverb_Level[n]->value();
+        pa_data[n].G_RevLev = double(pow(10.0, double(pa_data[n].RevLev /20.0)));
+    }
+}
+
+
 void MainWindow::updateLevel()
 {
     for (int n=0; n<nbInstru; n++) {
-
         switch (pa_data[n].mode) {
             case Playback :
                 if (L_In[n]->value() > 0) L_In[n]->setPrefix("Rep : +"); else L_In[n]->setPrefix("Rep : ");
@@ -2682,8 +2716,8 @@ void MainWindow::updateLevel()
             L_In[n]->setValue(-41);
             break;
         }
-        if (L_Out[n]->value() > 0) L_Out[n]->setPrefix("Out : +");
-        else L_Out[n]->setPrefix("Out : ");
+        if (L_Out[n]->value() > 0) L_Out[n]->setPrefix("File : +");
+        else L_Out[n]->setPrefix("File : ");
         pa_data[n].G_In = double(pow(10.0, double(pa_data[n].ListenVol /20.0)));
         pa_data[n].G_Play = double(pow(10.0, double(pa_data[n].PlayVol/20.0)));
         pa_data[n].G_Rec = double(pow(10.0, double(pa_data[n].RecVol/20.0)));

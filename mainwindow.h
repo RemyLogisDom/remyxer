@@ -93,6 +93,7 @@ public:
     QLineEdit *Nom[nbInstruMax];
     QSpinBox *L_In[nbInstruMax];
     QSpinBox *L_Out[nbInstruMax];
+    QSpinBox *Reverb_Level[nbInstruMax];
     QLabel *frameIndex[nbInstruMax];
     QVUMeter *vuMeter[nbInstruMax];
     QComboBox *ReverbSelect[nbInstruMax];
@@ -179,6 +180,7 @@ private slots:
     void saveFiles(int track = -1);
     void updateT();
     void updateLevel();
+    void updateReverb();
     void updateReplay(QPushButton *);
     void showMix(QPushButton *);
     void saveThisTrack(QPushButton *);
