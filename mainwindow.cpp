@@ -800,8 +800,6 @@ int MainWindow::Callback(const void *input,
             data->wavRecord[(data->position << 1) + (i << 1) + 1] = data->buffer_in[i].R * data->G_Rec; }
             }
             // add playback from other tracks
-            // not needed any more since track inter mix
-            //if (data->mixEnabled && mixEnabled && (!Paused)) {
             //change 15/09/2022
             //if (mixEnabled && (!Paused)) {
             if (mixEnabled && data->mixEnabled) {
@@ -2080,6 +2078,21 @@ void MainWindow::updateEcouteur(myCombo* select)
             if (deviceMicName.at(i).contains(end_of) && (deviceMicName.at(i).endsWith(sr)) && (deviceMicName.at(i).startsWith(begin_of))) {
                 Micro[index]->setCurrentText(deviceMicName.at(i));
     } } } }
+    for (int n=0; n<nbInstru; n++) {
+        for (int i=0; i<deviceName.count(); i++) {
+            bool deviceUsed = false;
+            QString dev;
+            for (int x=0; x<nbInstru; x++) {
+                if (i != x) {
+                    if (deviceName.at(i) == Ecouteur[x]->currentText()) {
+                        deviceUsed = true;
+                        dev = Nom[x]->text(); }
+            }
+        }
+        if (deviceUsed) { Ecouteur[n]->setItemData(i, QColor(255, 127, 80), Qt::BackgroundRole);
+            Ecouteur[n]->setItemData(i, dev, Qt::ToolTipRole); }
+        else Ecouteur[n]->setItemData(i, QColor(218, 227, 226), Qt::BackgroundRole);
+    } }
 }
 
 
