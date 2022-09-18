@@ -1374,13 +1374,14 @@ int64_t MainWindow::loadWavFile(QString fileName, float *&wavSound, bool &conver
     int64_t wavSize = 0;
     SF_INFO sfInfo;
     SNDFILE *sndFile = sf_open(fileName.toLocal8Bit(), SFM_READ, &sfInfo);
-    if (!sndFile) { ui->log->append(fileName + " file not found"); return 0; }
+    if (!sndFile) { ui->log->append(fileName + " file not found"); wavSound = nullptr; return 0; }
     int64_t frames = sfInfo.frames;
     if (sfInfo.channels != 2) {
         QMessageBox msgBox;
         msgBox.setText("File is not stereo\nCan't load file");
         msgBox.setStandardButtons(QMessageBox::Abort);
         msgBox.exec();
+        wavSound = nullptr;
         return 0;
     }
     if (sfInfo.samplerate == SAMPLE_RATE)
@@ -1457,32 +1458,68 @@ void MainWindow::gen_metronome()
     bool ok;
     int bpm = QInputDialog::getInt(this, tr("BPM"), tr("BPM :"), 120, 50, 280, 1, &ok);
     if (!ok) return;
-    int t = QInputDialog::getInt(this, tr("Durée"), tr("Durée en secondes :"), 300, 1, 3600, 1, &ok);
+    //int t = QInputDialog::getInt(this, tr("Durée"), tr("Durée en secondes :"), 300, 1, 3600, 1, &ok);
+    int nbMesure = QInputDialog::getInt(this, tr("Durée"), tr("Nombre de mesure :"), 20, 1, 999, 1, &ok);
     if (!ok) return;
 tryAgain:
-    QString ticFileName = QFileDialog::getOpenFileName(this, ("Open File"), "", ("Wav (*.wav )"));
+    //QString ticFileName = QFileDialog::getOpenFileName(this, ("Open File"), "", ("Wav (*.wav )"));
+    QString ticFileName = QFileDialog::getOpenFileName(this, ("Open File"), "", ("Text (*.txt )"));
     if (ticFileName.isEmpty()) return;
-    float *wavTicSound = nullptr;
+    // open text file
+    QFile file(ticFileName);
+    QFileInfo fileInfo(ticFileName);
+    file.open(QIODevice::ReadOnly);
+    QString startSequence = file.readLine();
+    if (startSequence.count() < 1) {
+        QMessageBox msgBox;
+        msgBox.setText("Start sequence error");
+        msgBox.setInformativeText("Start sequence is too small");
+        msgBox.setStandardButtons(QMessageBox::Cancel);
+        return;
+    }
+    //qDebug() << "Start sequence : " + startSequence;
+    QString data = file.readAll();
+    QStringList list = data.split("\n");
+    QStringList wavFilelist;
+    foreach (QString str, list) {
+        if (!str.isEmpty()) wavFilelist.append(fileInfo.absolutePath() + QDir::separator() + str);
+    }
+    if (wavFilelist.count() == 0) {
+        QMessageBox msgBox;
+        msgBox.setText("Files missng");
+        msgBox.setInformativeText("No wav file found");
+        msgBox.setStandardButtons(QMessageBox::Cancel);
+        return;
+    }
+    // open all wav files
+    float *wavFiles[wavFilelist.count()];
+    int64_t wavFilesSize[wavFilelist.count()];
     bool converted = false;
-    int64_t ticSize = loadWavFile(ticFileName, wavTicSound, converted);
-    if (wavTicSound == nullptr) {
-        QMessageBox msgBox;
-        msgBox.setText("Can't load file");
-        msgBox.setStandardButtons(QMessageBox::Abort);
-        msgBox.exec();
-        return; }
-    if (ticSize > (SAMPLE_RATE / 2)) {
-        QMessageBox msgBox;
-        msgBox.setText("File is too long");
-        msgBox.setInformativeText("You must choose a shorter file");
-        msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Cancel);
-        if (msgBox.exec() == QMessageBox::Cancel) return;
-        goto tryAgain; }
+    for (int n=0; n<wavFilelist.count(); n++) {
+        //qDebug() << "Open file : " + wavFilelist[n];
+        wavFiles[n] = nullptr;
+        wavFilesSize[n] = loadWavFile(wavFilelist[n], wavFiles[n], converted);
+        // check if sound file was loaded
+        if (wavFiles[n] == nullptr) {
+            QMessageBox msgBox;
+            msgBox.setText("Can't load file : " + wavFilelist[n]);
+            msgBox.setStandardButtons(QMessageBox::Abort);
+            msgBox.exec();
+            return; }
+        // check if sound file is too long
+        if (wavFilesSize[n] > (SAMPLE_RATE / 2)) {
+            QMessageBox msgBox;
+            msgBox.setText("File is too long " + wavFilelist[n]);
+            msgBox.setInformativeText("You must choose a shorter file");
+            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+            msgBox.setDefaultButton(QMessageBox::Cancel);
+            if (msgBox.exec() == QMessageBox::Cancel) return;
+            goto tryAgain; }
+    }
 nameAgain:
     QString text = QInputDialog::getText(this, tr("Metronome sound file"), tr("Choose a sound file :"), QLineEdit::Normal, "Sound file", &ok);
     if (!ok) return;
-    QString wavFileName = text + ".wav"; // + QDir::separator() + newfName;
+    QString wavFileName = text + ".wav";
     if (QFile::exists(wavFileName)) {
         QMessageBox msgBox;
         msgBox.setText("File already exists");
@@ -1493,14 +1530,20 @@ nameAgain:
         if (r == QMessageBox::Cancel) return;
         if (r == QMessageBox::No) goto nameAgain;
         }
-    int64_t wavSize = t * SAMPLE_RATE;
+    int64_t wavSize = (startSequence.count() + (nbMesure * wavFilelist.count()) + 1) * 60 / bpm * SAMPLE_RATE;
     float *wav_st = new float[wavSize * 2];
     int sampleClic = SAMPLE_RATE * 60 / bpm;
     for (int n=0; n<wavSize * 2; n++) { wav_st[n] = 0; }
-    for (int n=0; n<wavSize * 2; n+=sampleClic * 2) {
-        for (int i=0; i<ticSize; i+=1) {
-            wav_st[n + (i << 1)] = wavTicSound[i << 1];
-            wav_st[n + (i << 1) + 1] = wavTicSound[i << 1]; } }
+    for (int n=0; n<startSequence.count(); n++) {
+        if (startSequence.at(n) == "1") {
+            for (int64_t i=0; i<wavFilesSize[0]; i+=1) {
+                wav_st[(n * sampleClic * 2) + i] = wavFiles[0][i]; } } }
+    int64_t offest = (startSequence.count() - 1) * sampleClic * 2;
+    for (int mesure=0; mesure<nbMesure; mesure++) {
+        for (int t=0; t<wavFilelist.count(); t++) {
+            for (int64_t i=0; i<wavFilesSize[t]; i++) {
+                wav_st[(((mesure * wavFilelist.count() ) + t) * sampleClic * 2) + i + offest] = wavFiles[t][i];
+            } } }
     SF_INFO sfinfo ;
     sfinfo.channels = 2;
     sfinfo.samplerate = SAMPLE_RATE;
@@ -1570,7 +1613,13 @@ void MainWindow::setFile(QString str)
     fileName = str;
     ui->groupBox->setToolTip(fileName);
     sndFile = sf_open(fileName.toUtf8(), SFM_READ, &sfInfo);
-
+    if (sndFile == nullptr) {
+        QMessageBox msgBox;
+        msgBox.setText("File not found\n" + fileName);
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+        return;
+    }
     float *wavDataFile = nullptr;
     bool converted = false;
     Frames = loadWavFile(fileName, wavDataFile, converted);
