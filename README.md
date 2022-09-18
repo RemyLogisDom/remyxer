@@ -17,7 +17,7 @@ Every musician will hear its own sound mixed with the wav sound track but it can
 
 Remyxer can record all musician tracks independently and produce a wav file for each musician.
 
-Once recorded, Remyxer can playback all the tracks, or record one or more will playing the others, or whatever you need.
+Once recorded, Remyxer can playback all the tracks, or record one or more while playing the others, or whatever you need.
 
 Remyxer can upload the wav files to an FTP server to share it with the other band members working on the same partition, then musicians can work even if a musician in not present or if they are not together, they will still have the recorded sounds.
 
